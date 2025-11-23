@@ -61,14 +61,14 @@
         }
 
         /* Action Bar Positioning Logic */
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .mobile-action-bar {
                 position: fixed;
                 bottom: calc(4.5rem + env(safe-area-inset-bottom));
                 z-index: 30;
             }
         }
-        @media (min-width: 769px) {
+        @media (min-width: 1025px) {
             .mobile-action-bar {
                 position: absolute;
                 bottom: 0;
@@ -260,10 +260,11 @@
 <body class="flex items-center justify-center sm:p-8 h-[100dvh] sm:h-screen">
 
     <!-- Main App Container -->
-    <div class="glass-panel w-full h-full md:max-w-6xl md:h-[90vh] md:rounded-2xl flex flex-col md:flex-row overflow-hidden shadow-2xl relative">
+    <!-- Changed md:flex-row to lg:flex-row to give more space on tablets -->
+    <div class="glass-panel w-full h-full md:max-w-6xl md:h-[90vh] md:rounded-2xl flex flex-col lg:flex-row overflow-hidden shadow-2xl relative">
         
-        <!-- Sidebar (Hidden on Mobile) -->
-        <div class="glass-sidebar w-64 flex-col justify-between py-6 z-20 hidden md:flex">
+        <!-- Sidebar (Hidden on Mobile AND Tablet now, visible only on Large screens) -->
+        <div class="glass-sidebar w-64 flex-col justify-between py-6 z-20 hidden lg:flex">
             <div>
                 <div class="px-6 mb-8 flex items-center space-x-3">
                     <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white shadow-lg">
@@ -321,8 +322,8 @@
             </div>
         </div>
 
-        <!-- Mobile Top Bar -->
-        <div class="md:hidden h-14 bg-white/70 backdrop-blur-md border-b border-gray-200/50 flex items-center justify-between px-4 z-30 shrink-0">
+        <!-- Mobile/Tablet Top Bar (Visible below Large screens) -->
+        <div class="lg:hidden h-14 bg-white/70 backdrop-blur-md border-b border-gray-200/50 flex items-center justify-between px-4 z-30 shrink-0">
              <div class="flex items-center space-x-2">
                 <div class="w-7 h-7 bg-blue-500 rounded-md flex items-center justify-center text-white shadow-md">
                     <i data-lucide="layers" class="w-4 h-4"></i>
@@ -338,16 +339,16 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col bg-white/30 relative h-full">
             
-            <!-- Tool Header (Desktop/Tablet) -->
-            <div class="h-16 border-b border-gray-200/50 hidden md:flex items-center justify-between px-8 backdrop-blur-md z-10 shrink-0">
+            <!-- Tool Header (Desktop) -->
+            <div class="h-16 border-b border-gray-200/50 hidden lg:flex items-center justify-between px-8 backdrop-blur-md z-10 shrink-0">
                 <h2 id="tool-title" class="text-lg font-semibold text-gray-800">Merge PDF</h2>
                 <div class="flex space-x-3">
                      <button onclick="clearAll()" class="text-sm text-gray-500 hover:text-red-500 transition-colors">Reset</button>
                 </div>
             </div>
 
-            <!-- Mobile Tool Header -->
-            <div class="h-12 border-b border-gray-200/50 md:hidden flex items-center justify-between px-4 bg-white/20 backdrop-blur-sm z-10 shrink-0">
+            <!-- Mobile/Tablet Tool Header -->
+            <div class="h-12 border-b border-gray-200/50 lg:hidden flex items-center justify-between px-4 bg-white/20 backdrop-blur-sm z-10 shrink-0">
                 <h2 id="tool-title-mobile" class="text-sm font-semibold text-gray-800">Merge PDF</h2>
                 <button onclick="clearAll()" class="text-xs text-gray-500 hover:text-red-500 bg-white/40 px-3 py-1 rounded-full">Reset</button>
             </div>
@@ -361,8 +362,10 @@
                     <div class="w-12 h-12 md:w-16 md:h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform shadow-inner">
                         <i data-lucide="upload-cloud" class="w-6 h-6 md:w-8 md:h-8"></i>
                     </div>
-                    <h3 id="drop-text" class="text-base md:text-lg font-medium text-center text-gray-700 px-4">Tap to upload files</h3>
-                    <p class="text-xs md:text-sm text-gray-500 mt-2" id="file-types-hint">Supported: PDF files</p>
+                    <!-- Added px-10 and w-full for better spacing on narrow screens -->
+                    <h3 id="drop-text" class="text-base md:text-lg font-medium text-center text-gray-700 px-10 w-full break-words">Tap to upload files</h3>
+                    <!-- Added px-4 -->
+                    <p class="text-xs md:text-sm text-gray-500 mt-2 px-4 text-center" id="file-types-hint">Supported: PDF files</p>
                 </div>
 
                 <!-- File List / Preview Area -->
@@ -383,8 +386,8 @@
             
         </div>
 
-        <!-- Mobile Bottom Nav (Visible only on Mobile) -->
-        <div class="glass-navbar-bottom fixed bottom-0 left-0 right-0 h-[4.5rem] md:hidden z-40 flex items-center justify-start overflow-x-auto no-scrollbar px-2 space-x-2">
+        <!-- Mobile Bottom Nav (Visible only on Mobile AND Tablet now) -->
+        <div class="glass-navbar-bottom fixed bottom-0 left-0 right-0 h-[4.5rem] lg:hidden z-40 flex items-center justify-start overflow-x-auto no-scrollbar px-2 space-x-2">
             <!-- Nav Items -->
             <button onclick="switchTool('merge')" class="mobile-nav-item active flex flex-col items-center justify-center min-w-[4rem] h-full" data-tool="merge">
                 <i data-lucide="combine" class="w-5 h-5 mb-1"></i>
