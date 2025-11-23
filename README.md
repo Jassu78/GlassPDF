@@ -53,8 +53,8 @@ GlassPDF Suite is a modern, client-side web application for PDF manipulation wit
 - **Image to PDF**: Convert PNG/JPG images to PDF with drag-and-drop reordering
 - **PDF to Image**: Convert PDF pages to high-quality PNG images
 - **Compress PDF**: Optimize PDF file size locally
-- **Word to PDF**: Convert Microsoft Word documents to PDF (requires server)
-- **PPT to PDF**: Convert PowerPoint presentations to PDF (requires server)
+- **Word to PDF**: Convert Microsoft Word documents to PDF (Very Basic)
+- **PPT to PDF**: Convert PowerPoint presentations to PDF (NOT Yet Implemented) (requires server)
 
 ### User Experience
 
@@ -186,7 +186,7 @@ This is a pure client-side application with no dependencies to install. All libr
 | **Image to PDF** | Images (PNG/JPG) | Single PDF | ✅ Yes |
 | **PDF to Image** | PDF file | ZIP of PNGs | ❌ No |
 | **Compress PDF** | PDF file | Optimized PDF | ❌ No |
-| **Word to PDF** | DOC/DOCX | PDF | ❌ No* |
+| **Word to PDF** | DOC/DOCX | PDF | ❌ No (basic) |
 | **PPT to PDF** | PPT/PPTX | PDF | ❌ No* |
 
 *Note: Office document conversion requires server-side processing and is currently a placeholder for demonstration.*
