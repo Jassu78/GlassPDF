@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlassPDF Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- PDF Libraries -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- PDF.js for rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <style>
+        /* MacOS Glassmorphism Variables */
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            --sidebar-bg: rgba(240, 240, 245, 0.5);
+            --accent-blue: #007AFF;
+            --accent-hover: #0062cc;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+        }
+
+        .glass-sidebar {
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        
+        .nav-item:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .nav-item.active {
+            background: rgba(0, 122, 255, 0.15);
+            color: var(--accent-blue);
+            font-weight: 500;
+        }
+
+        .drop-zone {
+            border: 2px dashed rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent-blue);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+            transition: transform 0.1s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.2);
+        }
+
+        .file-card {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loader {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #fff;
+            width: 20px;
+            height: 20px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 sm:p-8">
+
+    <!-- Main App Container -->
+    <div class="glass-panel w-full max-w-6xl h-[90vh] rounded-2xl flex overflow-hidden shadow-2xl relative">
+        
+        <!-- Sidebar -->
+        <div class="glass-sidebar w-20 sm:w-64 flex flex-col justify-between py-6 z-10">
+            <div>
+                <div class="px-6 mb-8 flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white shadow-lg">
+                        <i data-lucide="layers" class="w-5 h-5"></i>
+                    </div>
+                    <span class="text-xl font-bold text-gray-800 hidden sm:block tracking-tight">GlassPDF</span>
+                </div>
+
+                <nav class="space-y-1 px-3">
+                    <button onclick="switchTool('merge')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600 active" id="nav-merge">
+                        <i data-lucide="combine" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">Merge PDF</span>
+                    </button>
+                    <button onclick="switchTool('split')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-split">
+                        <i data-lucide="scissors" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">Split PDF</span>
+                    </button>
+                    <button onclick="switchTool('img2pdf')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-img2pdf">
+                        <i data-lucide="image" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">Image to PDF</span>
+                    </button>
+                    <button onclick="switchTool('pdf2img')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-pdf2img">
+                        <i data-lucide="file-image" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">PDF to Image</span>
+                    </button>
+                    <div class="my-4 border-t border-gray-300 mx-4 opacity-50"></div>
+                    <button onclick="switchTool('word2pdf')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-word2pdf">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">Word to PDF</span>
+                    </button>
+                    <button onclick="switchTool('ppt2pdf')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-ppt2pdf">
+                        <i data-lucide="presentation" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">PPT to PDF</span>
+                    </button>
+                    <button onclick="switchTool('compress')" class="nav-item w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-600" id="nav-compress">
+                        <i data-lucide="minimize-2" class="w-5 h-5"></i>
+                        <span class="hidden sm:block text-sm">Compress PDF</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="px-6 hidden sm:block">
+                <div class="bg-white/40 p-4 rounded-xl backdrop-blur-sm border border-white/50">
+                    <p class="text-xs text-gray-500 font-medium mb-1">Status</p>
+                    <div class="flex items-center space-x-2 text-green-600">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-xs font-semibold">Ready</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col bg-white/30 relative">
+            
+            <!-- Tool Header -->
+            <div class="h-16 border-b border-gray-200/50 flex items-center justify-between px-8 backdrop-blur-md z-10">
+                <h2 id="tool-title" class="text-lg font-semibold text-gray-800">Merge PDF</h2>
+                <div class="flex space-x-3">
+                     <button onclick="clearAll()" class="text-sm text-gray-500 hover:text-red-500 transition-colors">Reset</button>
+                </div>
+            </div>
+
+            <!-- Workspace -->
+            <div class="flex-1 overflow-y-auto p-8" id="workspace">
+                
+                <!-- Drop Zone -->
+                <div id="drop-zone" class="drop-zone w-full h-64 rounded-xl bg-white/40 flex flex-col items-center justify-center cursor-pointer hover:bg-white/60 group relative mb-8">
+                    <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" multiple onchange="handleFileSelect(event)">
+                    <div class="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-700">Drop files here or click to upload</h3>
+                    <p class="text-sm text-gray-500 mt-2" id="file-types-hint">Supported: PDF files</p>
+                </div>
+
+                <!-- File List / Preview Area -->
+                <div id="file-list" class="grid grid-cols-1 gap-3 mb-20">
+                    <!-- Files will be injected here via JS -->
+                </div>
+
+            </div>
+
+            <!-- Action Bar -->
+            <div class="absolute bottom-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-lg border-t border-white/50 flex items-center justify-between px-8 shadow-lg z-20">
+                <div id="status-text" class="text-sm text-gray-500 font-medium">0 files selected</div>
+                <button id="action-btn" onclick="executeAction()" class="btn-primary px-6 py-3 rounded-xl font-medium shadow-lg shadow-blue-500/30 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <span>Process Files</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 bg-gray-800/90 text-white px-6 py-4 rounded-xl shadow-2xl backdrop-blur-md transform translate-x-[150%] transition-transform duration-300 z-50 flex items-center space-x-3">
+        <div id="toast-icon"></div>
+        <div>
+            <h4 id="toast-title" class="font-semibold text-sm">Notification</h4>
+            <p id="toast-msg" class="text-xs text-gray-300 mt-0.5">Message body</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // App State
+        let currentTool = 'merge';
+        let filesQueue = [];
+        let processing = false;
+
+        // Tool Configurations
+        const tools = {
+            'merge': { title: 'Merge PDFs', accept: '.pdf', hint: 'Combine multiple PDFs into one document.' },
+            'split': { title: 'Split PDF', accept: '.pdf', hint: 'Extract pages from a PDF document.' },
+            'img2pdf': { title: 'Image to PDF', accept: 'image/png, image/jpeg, image/jpg', hint: 'Convert PNG or JPG images to a single PDF.' },
+            'pdf2img': { title: 'PDF to Image', accept: '.pdf', hint: 'Convert PDF pages to high-quality images.' },
+            'word2pdf': { title: 'Word to PDF', accept: '.docx, .doc', hint: 'Convert Microsoft Word documents to PDF.' },
+            'ppt2pdf': { title: 'PPT to PDF', accept: '.pptx, .ppt', hint: 'Convert PowerPoint presentations to PDF.' },
+            'compress': { title: 'Compress PDF', accept: '.pdf', hint: 'Reduce file size while maintaining quality.' }
+        };
+
+        // --- Navigation ---
+
+        function switchTool(toolId) {
+            currentTool = toolId;
+            
+            // Update UI
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${toolId}`).classList.add('active');
+            
+            // Update Header & Hint
+            const config = tools[toolId];
+            document.getElementById('tool-title').innerText = config.title;
+            document.getElementById('file-types-hint').innerText = config.hint;
+            document.getElementById('file-input').accept = config.accept;
+
+            // Reset workspace
+            clearAll();
+        }
+
+        // --- File Handling ---
+
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+
+        // Drag & Drop Visuals
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        function handleFileSelect(event) {
+            handleFiles(event.target.files);
+            fileInput.value = ''; // reset so same file can be selected again
+        }
+
+        function handleFiles(fileList) {
+            if (processing) return;
+
+            const newFiles = Array.from(fileList);
+            // Filter based on tool
+            const accepted = tools[currentTool].accept.split(',').map(x => x.trim().replace('.', ''));
+            
+            const validFiles = newFiles.filter(file => {
+                const ext = file.name.split('.').pop().toLowerCase();
+                const type = file.type;
+                if(tools[currentTool].accept.includes('image')) {
+                    return type.startsWith('image/');
+                }
+                return accepted.includes(ext) || accepted.includes('.'+ext);
+            });
+
+            if (validFiles.length === 0 && newFiles.length > 0) {
+                showToast('Error', 'Invalid file type for this tool.', 'error');
+                return;
+            }
+
+            // For split/pdf2img/compress/office, we typically only process one file at a time or loop them.
+            // For Merge/Img2PDF we append.
+            if (['split', 'pdf2img', 'compress', 'word2pdf', 'ppt2pdf'].includes(currentTool)) {
+                filesQueue = [validFiles[0]]; // Only keep the last one added
+            } else {
+                filesQueue = [...filesQueue, ...validFiles];
+            }
+
+            renderFileList();
+            updateStatus();
+        }
+
+        function renderFileList() {
+            const listContainer = document.getElementById('file-list');
+            listContainer.innerHTML = '';
+
+            filesQueue.forEach((file, index) => {
+                const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                
+                const div = document.createElement('div');
+                div.className = 'file-card bg-white/60 p-4 rounded-xl border border-white/60 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow';
+                div.innerHTML = `
+                    <div class="flex items-center space-x-4 overflow-hidden">
+                        <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
+                            <i data-lucide="${getFileIcon(file.name)}" class="w-5 h-5"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-medium text-gray-800 truncate pr-4">${file.name}</p>
+                            <p class="text-xs text-gray-500">${size}</p>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition-colors">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                `;
+                listContainer.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (['pdf'].includes(ext)) return 'file-text';
+            if (['png', 'jpg', 'jpeg'].includes(ext)) return 'image';
+            if (['doc', 'docx'].includes(ext)) return 'file-type-2';
+            if (['ppt', 'pptx'].includes(ext)) return 'presentation';
+            return 'file';
+        }
+
+        function removeFile(index) {
+            filesQueue.splice(index, 1);
+            renderFileList();
+            updateStatus();
+        }
+
+        function clearAll() {
+            filesQueue = [];
+            renderFileList();
+            updateStatus();
+        }
+
+        function updateStatus() {
+            const btn = document.getElementById('action-btn');
+            const status = document.getElementById('status-text');
+            
+            if (filesQueue.length > 0) {
+                btn.disabled = false;
+                status.innerText = `${filesQueue.length} file${filesQueue.length !== 1 ? 's' : ''} ready`;
+                
+                // Button Text Logic
+                if (currentTool === 'merge') btn.querySelector('span').innerText = 'Merge Files';
+                else if (currentTool === 'split') btn.querySelector('span').innerText = 'Split PDF';
+                else if (currentTool === 'img2pdf') btn.querySelector('span').innerText = 'Create PDF';
+                else if (currentTool === 'pdf2img') btn.querySelector('span').innerText = 'Convert to Images';
+                else btn.querySelector('span').innerText = 'Convert File';
+
+            } else {
+                btn.disabled = true;
+                status.innerText = '0 files selected';
+                btn.querySelector('span').innerText = 'Process Files';
+            }
+        }
+
+        // --- Processing Logic ---
+
+        async function executeAction() {
+            if (filesQueue.length === 0) return;
+            
+            setLoading(true);
+
+            try {
+                switch (currentTool) {
+                    case 'merge':
+                        await mergePDFs();
+                        break;
+                    case 'split':
+                        await splitPDF();
+                        break;
+                    case 'img2pdf':
+                        await imagesToPDF();
+                        break;
+                    case 'pdf2img':
+                        await pdfToImages();
+                        break;
+                    case 'word2pdf':
+                    case 'ppt2pdf':
+                    case 'compress':
+                        await simulateProcess(); // Office/Compress requires backend, simulate for UI demo
+                        break;
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error', 'An error occurred during processing.', 'error');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // 1. Merge PDFs
+        async function mergePDFs() {
+            const { PDFDocument } = PDFLib;
+            const mergedPdf = await PDFDocument.create();
+
+            for (const file of filesQueue) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await PDFDocument.load(arrayBuffer);
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                copiedPages.forEach((page) => mergedPdf.addPage(page));
+            }
+
+            const pdfBytes = await mergedPdf.save();
+            downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), 'merged_document.pdf');
+            showToast('Success', 'PDFs merged successfully!', 'success');
+        }
+
+        // 2. Images to PDF
+        async function imagesToPDF() {
+            const { PDFDocument } = PDFLib;
+            const doc = await PDFDocument.create();
+
+            for (const file of filesQueue) {
+                const buffer = await file.arrayBuffer();
+                let image;
+                // Embed based on type
+                if (file.type === 'image/jpeg') {
+                    image = await doc.embedJpg(buffer);
+                } else if (file.type === 'image/png') {
+                    image = await doc.embedPng(buffer);
+                }
+                
+                if (image) {
+                    const page = doc.addPage();
+                    // Scale image to fit page
+                    const { width, height } = image.scale(1);
+                    const pageWidth = page.getWidth();
+                    const pageHeight = page.getHeight();
+                    
+                    // Simple logic to fit image within A4 roughly or keep original ratio if small
+                    // For simplicity, we just draw it centered, scaled down if too big
+                    const scaleFactor = Math.min(pageWidth / width, pageHeight / height, 1);
+                    
+                    page.drawImage(image, {
+                        x: (pageWidth - width * scaleFactor) / 2,
+                        y: (pageHeight - height * scaleFactor) / 2,
+                        width: width * scaleFactor,
+                        height: height * scaleFactor,
+                    });
+                }
+            }
+
+            const pdfBytes = await doc.save();
+            downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), 'images_combined.pdf');
+            showToast('Success', 'PDF created from images!', 'success');
+        }
+
+        // 3. Split PDF (Extract all pages as separate files in a ZIP)
+        async function splitPDF() {
+            const file = filesQueue[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const { PDFDocument } = PDFLib;
+            const pdfDoc = await PDFDocument.load(arrayBuffer);
+            const numberOfPages = pdfDoc.getPageCount();
+
+            const zip = new JSZip();
+
+            for (let i = 0; i < numberOfPages; i++) {
+                const subDocument = await PDFDocument.create();
+                const [copiedPage] = await subDocument.copyPages(pdfDoc, [i]);
+                subDocument.addPage(copiedPage);
+                const pdfBytes = await subDocument.save();
+                zip.file(`page_${i + 1}.pdf`, pdfBytes);
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            downloadBlob(content, `split_${file.name.replace('.pdf','')}.zip`);
+            showToast('Success', 'PDF split into individual pages!', 'success');
+        }
+
+        // 4. PDF to Images (Using PDF.js and JSZip)
+        async function pdfToImages() {
+            const file = filesQueue[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+            const pdf = await loadingTask.promise;
+            const totalPages = pdf.numPages;
+            
+            const zip = new JSZip();
+
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 2.0 }); // Scale 2 for better quality
+                
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                const imgData = canvas.toDataURL('image/png').split(',')[1]; // Remove header
+                zip.file(`page_${pageNum}.png`, imgData, {base64: true});
+            }
+
+            const content = await zip.generateAsync({ type: "blob" });
+            downloadBlob(content, `images_${file.name.replace('.pdf','')}.zip`);
+            showToast('Success', 'PDF converted to images!', 'success');
+        }
+
+        // 5. Simulate Server-Side Tasks (Word/PPT/Compress)
+        // Note: Real conversion of Docx/PPTX requires backend server or huge WASM libraries.
+        function simulateProcess() {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const type = currentTool === 'compress' ? 'Compressed' : 'Converted';
+                    showToast('Demo Mode', `Client-side ${type.toLowerCase()} is limited. In a production app, this would use a backend API.`, 'info');
+                    resolve();
+                }, 2000);
+            });
+        }
+
+        // --- Helpers ---
+
+        function downloadBlob(blob, filename) {
+            saveAs(blob, filename);
+        }
+
+        function setLoading(isLoading) {
+            processing = isLoading;
+            const btn = document.getElementById('action-btn');
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<div class="loader"></div><span>Processing...</span>`;
+            } else {
+                updateStatus(); // Reset button text based on tool
+            }
+        }
+
+        function showToast(title, message, type) {
+            const toast = document.getElementById('toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastTitle.innerText = title;
+            toastMsg.innerText = message;
+            
+            // Icon
+            if (type === 'success') toastIcon.innerHTML = `<i data-lucide="check-circle" class="text-green-400 w-6 h-6"></i>`;
+            else if (type === 'error') toastIcon.innerHTML = `<i data-lucide="alert-circle" class="text-red-400 w-6 h-6"></i>`;
+            else toastIcon.innerHTML = `<i data-lucide="info" class="text-blue-400 w-6 h-6"></i>`;
+            
+            lucide.createIcons();
+
+            toast.classList.remove('translate-x-[150%]');
+            setTimeout(() => {
+                toast.classList.add('translate-x-[150%]');
+            }, 4000);
+        }
+
+    </script>
+</body>
+</html>
