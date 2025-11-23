@@ -16,6 +16,9 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    <!-- Office Conversion Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         /* MacOS Glassmorphism Variables */
@@ -446,7 +449,7 @@
             'split': { title: 'Split PDF', accept: '.pdf', hint: 'Extract pages from a PDF document.' },
             'img2pdf': { title: 'Image to PDF', accept: 'image/png, image/jpeg, image/jpg', hint: 'Convert PNG or JPG images to a single PDF. Drag to reorder.' },
             'pdf2img': { title: 'PDF to Image', accept: '.pdf', hint: 'Convert PDF pages to high-quality images.' },
-            'word2pdf': { title: 'Word to PDF', accept: '.docx, .doc', hint: 'Convert Microsoft Word documents to PDF.' },
+            'word2pdf': { title: 'Word to PDF', accept: '.docx', hint: 'Convert Microsoft Word documents to PDF.' },
             'ppt2pdf': { title: 'PPT to PDF', accept: '.pptx, .ppt', hint: 'Convert PowerPoint presentations to PDF.' },
             'compress': { title: 'Compress PDF', accept: '.pdf', hint: 'Optimize PDF file size locally.' }
         };
@@ -771,7 +774,7 @@
                     case 'img2pdf': await imagesToPDF(); break;
                     case 'pdf2img': await pdfToImages(); break;
                     case 'compress': await compressPDF(); break;
-                    case 'word2pdf': 
+                    case 'word2pdf': await wordToPDF(); break;
                     case 'ppt2pdf': await simulateOfficeProcess(); break;
                 }
             } catch (error) {
@@ -896,11 +899,43 @@
             showToast(msgType === 'success' ? 'Success' : 'Info', msgText, msgType);
         }
 
-        // 6. Simulate Office
+        // 6. Word to PDF (Client Side using Mammoth + html2pdf)
+        async function wordToPDF() {
+            const file = filesQueue[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            // Convert to HTML
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            
+            if (result.messages.length > 0) {
+                console.log("Mammoth messages:", result.messages);
+            }
+            
+            // Create container for PDF generation
+            const content = document.createElement('div');
+            content.innerHTML = `
+                <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; color: #000;">
+                    ${result.value}
+                </div>
+            `;
+            
+            const opt = {
+                margin:       [10, 10],
+                filename:     file.name.replace(/\.[^/.]+$/, "") + ".pdf",
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            await html2pdf().set(opt).from(content).save();
+            showToast('Success', 'Word converted to PDF!', 'success');
+        }
+
+        // 7. Simulate Office (Fallback for PPT)
         function simulateOfficeProcess() {
             return new Promise((resolve) => {
                 setTimeout(() => {
-                    showToast('Client-Side Limit', 'Office conversion requires a server. This is a demo.', 'info');
+                    showToast('Limitation', 'PPT conversion is too complex for browser-only apps. This remains a demo.', 'info');
                     resolve();
                 }, 1500);
             });
